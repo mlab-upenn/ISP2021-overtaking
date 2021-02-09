@@ -36,6 +36,8 @@ class line_segment:
     def __str__(self):
         return 'line segment p1: ' + str(self.pt1) + ', pt2: ' + str(self.pt2)
 
+    def length(self):
+        return np.linalg.norm(self.pt1-self.pt2)
 
 class circle:
     def __init__(self, pt, r):

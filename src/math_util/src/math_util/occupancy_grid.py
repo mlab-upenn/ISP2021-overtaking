@@ -45,5 +45,6 @@ class StaticOccupancyGrid():
     def checkForCollision(self, segment):
         if(not self.loaded):
             return False
-        knot_pts = np.linspace(segment.p1, segment.p2, np.linalg.norm(segment.p1-segment.p2)*2//self.metaData.resolution)
+        knot_pts = np.linspace(segment.pt1, segment.pt2, np.linalg.norm(segment.pt1-segment.pt2)*2//self.metaData.resolution)
+        print(self.getIndexFromWorldPoint(knot_pts))
         return np.any(self.occGrid['dynamic'][self.getIndexFromWorldPoint(knot_pts)] > 0)

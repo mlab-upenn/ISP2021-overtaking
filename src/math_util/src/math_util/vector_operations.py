@@ -21,6 +21,13 @@ def car_to_world(pose, car_frame):
 def get_forward_vector(pose):
 
     car_rot = quaternion_matrix([ pose.orientation.x, pose.orientation.y, pose.orientation.z,pose.orientation.w])
+    init = translation_matrix([1,0,0])
+    forward = translation_from_matrix(np.matmul(car_rot,init))
+    return forward[0:2]
+
+def get_left_vector(pose):
+
+    car_rot = quaternion_matrix([ pose.orientation.x, pose.orientation.y, pose.orientation.z,pose.orientation.w])
     init = translation_matrix([0,1,0])
     forward = translation_from_matrix(np.matmul(car_rot,init))
     return forward[0:2]
