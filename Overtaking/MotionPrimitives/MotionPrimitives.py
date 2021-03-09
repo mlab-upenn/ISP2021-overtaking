@@ -71,6 +71,8 @@ class MotionPrimitive:
         #a should be (N[straight/turn], res[0], res[1])
         s = self.get_s(speed,steering, straight)
         a = self.p*(torch.clamp_min(speed.view(-1,1,1)*self.t_la - s, 0))
+        # a = self.p*(torch.clamp_max(speed.view(-1,1,1)*self.t_la - s, 0))
+
 
         #this is to keep tuning consistent, negates the impact of p
         normalize = self.p*(speed.view(-1,1,1)*self.t_la)
@@ -111,7 +113,9 @@ class MotionPrimitive:
 if __name__ == '__main__':
     import time
     t_b = time.time()
-    MP = MotionPrimitive(list(torch.arange(2,4,.05)),list(torch.arange(-.5,.5,.05)) )
+    # MP = MotionPrimitive(list(torch.arange(2,4,.05)),list(torch.arange(-.5,.5,.05)) )
+    MP = MotionPrimitive([3.], [-0.4])
+
     t_a = time.time()
 
     print(t_a-t_b)
