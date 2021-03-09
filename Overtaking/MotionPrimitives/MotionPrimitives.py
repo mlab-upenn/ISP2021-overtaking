@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 
 
 class MotionPrimitive:
-    def __init__(self, speed_list, steering_list, L=1, p=1, t_la=2.5, k1=.1, k2=.3, k3=.1, m=.1, c=.2, bounds=(6, 3), resolution=(50, 50)):
+    def __init__(self, speed_list, steering_list, L=.33, p=1, t_la=2.5, k1=.2, k2=.3, k3=.1, m=.1, c=.2, local_grid_size = 6, resolution=(50, 50)):
         # speed and steering are lists of speed and steering values
         #L : wheelbase of the car
         # p : not currently used
@@ -24,13 +24,13 @@ class MotionPrimitive:
         self.k3 = k3
         self.m = m
         self.c = c
-        self.bounds = bounds
+        self.local_grid_size = local_grid_size
         self.resolution = resolution
 
 
 
         #x goes from 0 to bounds, y goes from -bounds to bounds
-        self.x, self.y = torch.meshgrid(torch.arange(0, bounds[0]+.0001, (bounds[0])/resolution[0]), torch.arange(-bounds[1], bounds[1]+.0001, (2*bounds[1])/resolution[1]))
+        self.x, self.y = torch.meshgrid(torch.arange(0, local_grid_size+.0001, local_grid_size/resolution[0]), torch.arange(-local_grid_size/2,local_grid_size/2+.0001, local_grid_size/resolution[1]))
 
         speed_vals = torch.tensor(speed_list)
         steering_vals = torch.tensor(steering_list)
@@ -46,8 +46,8 @@ class MotionPrimitive:
 
         primitives = torch.zeros((torch.numel(speed), resolution[0]+1, resolution[1]+1))
 
-        turn_mask = steering != 0
-        straight_mask = steering == 0
+        turn_mask = torch.abs(steering) > 0.01
+        straight_mask = torch.abs(steering) <= 0.01
 
 
 
@@ -56,6 +56,8 @@ class MotionPrimitive:
 
         turn_sig = self.get_sig(speed[turn_mask], steering[turn_mask], False)
         turn_a = self.get_a(speed[turn_mask], steering[turn_mask], False)
+
+        print(turn_a)
 
         if(torch.any(straight_mask)):
             primitives[straight_mask] = straight_a * torch.exp(-(self.y**2)/(2*straight_sig**2))
@@ -67,9 +69,13 @@ class MotionPrimitive:
 
         self.primitives = primitives
 
+
+        # self.primitives[:,2,1] = primitives[:,1,2]
+
     def get_a(self, speed, steering, straight):
         #a should be (N[straight/turn], res[0], res[1])
         s = self.get_s(speed,steering, straight)
+
         a = self.p*(torch.clamp_min(speed.view(-1,1,1)*self.t_la - s, 0))
         # a = self.p*(torch.clamp_max(speed.view(-1,1,1)*self.t_la - s, 0))
 
@@ -89,7 +95,7 @@ class MotionPrimitive:
             # radius of a point in relation to turn center times sweep angle gives arc length
             #not clear which formulation is best
             # return torch.sqrt(self.x.unsqueeze(0)**2 + (R-self.y.unsqueeze(0))**2)*torch.atan2(self.x.unsqueeze(0), R-self.y.unsqueeze(0))
-            return torch.abs(R)*torch.atan2(self.x.unsqueeze(0), self.y.unsqueeze(0)-R)
+            return torch.abs(R)*torch.min(torch.atan2(self.x.unsqueeze(0), self.y.unsqueeze(0)+R) , torch.atan2(self.x.unsqueeze(0), self.y.unsqueeze(0)-R))
 
         pass
 
@@ -110,17 +116,27 @@ class MotionPrimitive:
         R = self.L/torch.tan(steering)
         return R
 
+    def create_time_field(self):
+        r = (self.x**2 + self.y**2)/(2*torch.abs(self.y))
+
+        r = torch.clamp(r, max = 100)
+        s = r*torch.atan2(self.x, r - torch.abs(self.y))
+
+        s[torch.abs(r) < .5] = -1
+
+        return s
+
 if __name__ == '__main__':
     import time
     t_b = time.time()
     # MP = MotionPrimitive(list(torch.arange(2,4,.05)),list(torch.arange(-.5,.5,.05)) )
-    MP = MotionPrimitive([3.], [-0.4])
+    MP = MotionPrimitive([3.], [0.])
 
     t_a = time.time()
 
-    print(t_a-t_b)
+    # print(t_a-t_b)
 
-    print(MP.primitives.shape)
+    # print(MP.primitives.shape)
     plt.imshow(np.array(MP.primitives[0]))
     plt.colorbar()
 
