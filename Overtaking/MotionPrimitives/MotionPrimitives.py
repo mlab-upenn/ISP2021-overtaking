@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 
 
 class MotionPrimitive:
-    def __init__(self, speed_list, steering_list, L=.33, p=1, t_la=2.5, k1=.2, k2=.3, k3=.1, m=.1, c=.2, local_grid_size = 6, resolution=(50, 50)):
+    def __init__(self, speed_list, steering_list, L=.33, p=1, t_la=2.5, k1=.2, k2=.3, k3=.1, m=.1, c=.12, local_grid_size = 7, resolution=(50, 50)):
         # speed and steering are lists of speed and steering values
         #L : wheelbase of the car
         # p : not currently used
@@ -28,46 +28,48 @@ class MotionPrimitive:
         self.resolution = resolution
 
 
+        with torch.enable_grad():
+            #x goes from 0 to bounds, y goes from -bounds to bounds
+            self.x, self.y = torch.meshgrid(torch.arange(0, local_grid_size+.0001, local_grid_size/resolution[0]), torch.arange(-local_grid_size/2,local_grid_size/2+.0001, local_grid_size/resolution[1]))
 
-        #x goes from 0 to bounds, y goes from -bounds to bounds
-        self.x, self.y = torch.meshgrid(torch.arange(0, local_grid_size+.0001, local_grid_size/resolution[0]), torch.arange(-local_grid_size/2,local_grid_size/2+.0001, local_grid_size/resolution[1]))
+            speed_vals = torch.tensor(speed_list)
+            steering_vals = torch.tensor(steering_list)
 
-        speed_vals = torch.tensor(speed_list)
-        steering_vals = torch.tensor(steering_list)
-
-        speed, steering = torch.meshgrid(speed_vals, steering_vals)
-
-
-        speed = torch.flatten(speed)
-        steering = torch.flatten(steering)
-
-        self.speeds = speed
-        self.steering_angles = steering
-
-        primitives = torch.zeros((torch.numel(speed), resolution[0]+1, resolution[1]+1))
-
-        turn_mask = torch.abs(steering) > 0.01
-        straight_mask = torch.abs(steering) <= 0.01
+            speed, steering = torch.meshgrid(speed_vals, steering_vals)
 
 
+            speed = torch.flatten(speed)
+            steering = torch.flatten(steering)
 
-        straight_sig = self.get_sig(speed[straight_mask], steering[straight_mask], True)
-        straight_a = self.get_a(speed[straight_mask], steering[straight_mask], True)
+            self.speeds = speed
+            self.steering_angles = steering
 
-        turn_sig = self.get_sig(speed[turn_mask], steering[turn_mask], False)
-        turn_a = self.get_a(speed[turn_mask], steering[turn_mask], False)
+            primitives = torch.zeros((torch.numel(speed), resolution[0]+1, resolution[1]+1))
 
-        print(turn_a)
+            turn_mask = torch.abs(steering) > 0.01
+            straight_mask = torch.abs(steering) <= 0.01
 
-        if(torch.any(straight_mask)):
-            primitives[straight_mask] = straight_a * torch.exp(-(self.y**2)/(2*straight_sig**2))
 
-        #handle turn case:
-        if(torch.any(turn_mask)):
-            R = self.get_R(speed[turn_mask],steering[turn_mask]).view(-1,1,1)
-            primitives[turn_mask] = turn_a * torch.exp(-(torch.sqrt(self.x**2 + (self.y - R)**2) - torch.abs(R))**2 / (2*turn_sig**2))
 
-        self.primitives = primitives
+            straight_sig = self.get_sig(speed[straight_mask], steering[straight_mask], True)
+            straight_a = self.get_a(speed[straight_mask], steering[straight_mask], True)
+
+            turn_sig = self.get_sig(speed[turn_mask], steering[turn_mask], False)
+            turn_a = self.get_a(speed[turn_mask], steering[turn_mask], False)
+
+            print(turn_a)
+
+            if(torch.any(straight_mask)):
+                primitives[straight_mask] = straight_a * torch.exp(-(self.y**2)/(2*straight_sig**2))
+
+            #handle turn case:
+            if(torch.any(turn_mask)):
+                R = self.get_R(speed[turn_mask],steering[turn_mask]).view(-1,1,1)
+                primitives[turn_mask] = turn_a * torch.exp(-(torch.sqrt(self.x**2 + (self.y - R)**2) - torch.abs(R))**2 / (2*turn_sig**2))
+
+            self.primitives = primitives
+
+            self.time_field = self.create_time_field()
 
 
         # self.primitives[:,2,1] = primitives[:,1,2]
@@ -122,7 +124,7 @@ class MotionPrimitive:
         r = torch.clamp(r, max = 100)
         s = r*torch.atan2(self.x, r - torch.abs(self.y))
 
-        s[torch.abs(r) < .5] = -1
+        # s[torch.abs(r) < .5] = -100
 
         return s
 

@@ -31,7 +31,7 @@ class PureRiskController():
         self.resolution = resolution
         self.local_grid_world_size = local_grid_world_size
 
-        speeds = [i for i in torch.arange(4.0,4.01,.3)]
+        speeds = [i for i in torch.arange(3.0,3.01,.3)]
         angles = [i for i in torch.arange(-.3,.3001, .005)]
 
         self.MP = MotionPrimitive(speeds, angles, resolution = (resolution, resolution), local_grid_size=local_grid_world_size)
