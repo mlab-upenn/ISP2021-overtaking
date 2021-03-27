@@ -26,12 +26,12 @@ if __name__ == '__main__':
         speed, steer, prim = controller.plan(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0])
         end = time.time()
 
-        print(end-start)
+        # print(end-start)
 
         obs, step_reward, done, info = env.step(np.array([[steer, speed]]))
         # laptime += step_reward
 
-        env.render(mode='human_fast', planner_data = (controller.MP.x, controller.MP.y, prim) )
+        env.render(mode='human_fast', planner_data = [(controller.MP.x, controller.MP.y, prim)] )
         # env.render(mode='human_fast')
 
     # print('Sim elapsed time:', laptime, 'Real elapsed time:', time.time()-start)
