@@ -43,7 +43,7 @@ class MotionPrimitive:
         self.speeds = speed
         self.steering_angles = steering
 
-        self.create_primitives(self.speeds, self.steering)
+        self.create_primitives(self.speeds, self.steering_angles)
 
         self.time_field = self.create_time_field()
 
@@ -52,7 +52,7 @@ class MotionPrimitive:
 
 
     def create_primitives(self, speed, steering):
-        primitives = torch.zeros((torch.numel(speed), resolution[0] + 1, resolution[1] + 1))
+        primitives = torch.zeros((torch.numel(speed), self.resolution[0] + 1, self.resolution[1] + 1))
 
         turn_mask = torch.abs(steering) > 0.01
         straight_mask = torch.abs(steering) <= 0.01
