@@ -11,7 +11,7 @@ from ..Util import LocalField
 
 class DynamicObstacleController():
 
-    def __init__(self, map_path, map_ext, local_grid_world_size = 5, resolution=40):
+    def __init__(self, map_path, map_ext, local_grid_world_size = 5, resolution=70):
         ## from renderer.py in f1tenth gym for loading map image
         with open(map_path + '.yaml', 'r') as yaml_stream:
             try:

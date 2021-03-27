@@ -34,7 +34,7 @@ class PureRiskController():
         speeds = [i for i in torch.arange(3.0,3.01,.3)]
         angles = [i for i in torch.arange(-.3,.3001, .005)]
 
-        self.MP = MotionPrimitive(speeds, angles, resolution = (resolution, resolution), local_grid_size=local_grid_world_size)
+        self.MP = MotionPrimitive(speeds, angles,L=.33, p=1, t_la=2.5, k1=.2, k2=.3, k3=.1, m=.1, c=.12, resolution = (resolution, resolution), local_grid_size=local_grid_world_size)
 
     def plan(self, x, y, theta):
 
