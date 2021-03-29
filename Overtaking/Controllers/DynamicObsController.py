@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from Overtaking.MotionPrimitives.MotionPrimitives import MotionPrimitive
 from Overtaking.Controllers.Controller import Controller
-from Overtaking.Util import LocalField
+from Overtaking.Util.LocalField import sample_against_data
 
 
 class DynamicObstacleController(Controller):
@@ -33,8 +33,8 @@ class DynamicObstacleController(Controller):
         local_grid = self.map.sample_obstacles(pose, self.local_grid_size, self.resolution)
 
         #sample from opponent time and plan fields
-        sampled_opp_time_field = self.map.sample_against_data(self.opp_time_field.unsqueeze(0).unsqueeze(0), self.resolution, 1, self.opp_local_size, pose - self.opp_pose, -100)
-        sampled_opp_plan_field = self.map.sample_against_data(self.opp_plan.unsqueeze(0).unsqueeze(0), self.resolution, 1, self.opp_local_size, pose - self.opp_pose, 0)
+        sampled_opp_time_field = sample_against_data(self.opp_time_field.unsqueeze(0).unsqueeze(0), self.resolution, 1, self.opp_local_size, pose - self.opp_pose, -np.Inf)
+        sampled_opp_plan_field = sample_against_data(self.opp_plan.unsqueeze(0).unsqueeze(0), self.resolution, 1, self.opp_local_size, pose - self.opp_pose, 0)
 
         ego_time_field = self.MP.time_field / self.MP.speeds.reshape((-1,1,1))
 

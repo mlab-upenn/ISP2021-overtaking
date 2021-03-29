@@ -45,12 +45,16 @@ class Map():
         local_grid = -(local_grid - 1).squeeze()
         return local_grid
 
-    def sample_against_data(self, data, resolution, local_relative_scale, data_scale, pose_delta, null_value):
-        #data: the 2d grid of data that the local field should sample from
-        #resolution: number of squares in local grid
-        #local_relative_scale: size of the local grid/size of the data grid
-        #data_scale: scale of the data in world space
-        #pose_delta: difference between poses (x, y, theta)
+    @staticmethod
+    def _sample_against_data(data, resolution, local_relative_scale, 
+                            data_scale, pose_delta, null_value):
+        """
+        data: the 2d grid of data that the local field should sample from
+        resolution: number of squares in local grid
+        local_relative_scale: size of the local grid/size of the data grid
+        data_scale: scale of the data in world space
+        pose_delta: difference between poses (x, y, theta)
+        """
         data_offset = pose_delta[:2] / (data_scale / 2) - torch.tensor([1, 0])
         aff_g = Map._generate_local_affine_grid(pose_delta[2], resolution) \
                 * local_relative_scale + data_offset
@@ -62,14 +66,13 @@ class Map():
 
     @staticmethod
     def _generate_local_affine_grid(theta, resolution):
-        #theta: world angle for the car
-        #resolution: number of squares in grid
-        theta = torch.tensor(theta).double()
+        """
+        theta: world angle for the car
+        resolution: number of squares in grid
+        """
         T = torch.tensor([[torch.cos(theta), -torch.sin(theta), torch.cos(theta)],
-                        [torch.sin(theta), torch.cos(theta), torch.sin(theta)]]).unsqueeze(0)
-        sample_grid = torch.nn.functional.affine_grid(T, torch.Size((1, 1, resolution + 1, resolution + 1)))
-
-        return sample_grid
+                          [torch.sin(theta), torch.cos(theta), torch.sin(theta)]]).unsqueeze(0)
+        return torch.nn.functional.affine_grid(T, torch.Size((1, 1, resolution + 1, resolution + 1)))
 
 
 if __name__ == '__main__':
