@@ -19,6 +19,10 @@ def sample_map_obstacles(x, y, theta, map_image, local_grid_world_size, resoluti
     sample_grid = sample_grid * (local_grid_world_size / (map_size)) - torch.tensor([1, 1]) + scaled_position
     # print(sample_grid)
 
+    print(map_image)
+    plt.imshow(map_image.squeeze())
+    plt.show()
+
     local_grid = torch.nn.functional.grid_sample(map_image, sample_grid, mode='nearest')
     local_grid = torch.round(local_grid / 255)
 
