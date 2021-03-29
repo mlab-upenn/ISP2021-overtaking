@@ -4,7 +4,7 @@ import numpy as np
 from argparse import Namespace
 import time
 from Overtaking.Controllers import PureRiskController as PRC
-from Overtaking.Controllers import DynamicObsController as DOC
+from Overtaking.Controllers import TreePrimitiveController as TPC
 import torch
 
 
@@ -19,11 +19,15 @@ if __name__ == '__main__':
     obs, step_reward, done, info = env.reset(np.array([[conf.sx, conf.sy - 4, conf.stheta],[conf.sx, conf.sy , conf.stheta]]))
     # env.render()
 
+    speeds = [i for i in torch.arange(5.0, 5.01, .3)]
+    angles = [i for i in torch.arange(-.3, .3001, .1)]
+
+
+    controller = TPC.TreePrimitiveController(conf.map_path, conf.map_ext, depth=3, speeds=speeds, angles=angles)
+
+
     speeds = [i for i in torch.arange(3.0, 3.01, .3)]
-    angles = [i for i in torch.arange(-.3, .3001, .005)]
-
-    controller = DOC.DynamicObstacleController(conf.map_path, conf.map_ext, speeds, angles)
-
+    angles = [i for i in torch.arange(-.3, .3001, .1)]
     opp_controller = PRC.PureRiskController(conf.map_path, conf.map_ext, speeds, angles)
 
     while not done:

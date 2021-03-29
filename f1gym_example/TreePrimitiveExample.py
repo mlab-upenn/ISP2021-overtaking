@@ -3,7 +3,7 @@ import gym
 import numpy as np
 from argparse import Namespace
 import time
-from Overtaking.Controllers import PureRiskController as PRC
+from Overtaking.Controllers import TreePrimitiveController as TPC
 import torch
 
 if __name__ == '__main__':
@@ -16,10 +16,10 @@ if __name__ == '__main__':
     env = gym.make('f110_gym:f110-v0', map=conf.map_path, map_ext=conf.map_ext, num_agents=1)
     obs, step_reward, done, info = env.reset(np.array([[conf.sx, conf.sy, conf.stheta]]))
     # env.render()
-    speeds = [i for i in torch.arange(3.0, 3.01, .3)]
-    angles = [i for i in torch.arange(-.3, .3001, .005)]
+    speeds = [i for i in torch.arange(5.0, 5.01, .3)]
+    angles = [i for i in torch.arange(-.2, .2001, .05)]
 
-    controller = PRC.PureRiskController(conf.map_path, conf.map_ext, speeds=speeds, angles=angles)
+    controller = TPC.TreePrimitiveController(conf.map_path, conf.map_ext, depth=3, speeds=speeds, angles=angles)
 
 
     while not done:
@@ -27,11 +27,11 @@ if __name__ == '__main__':
         speed, steer, prim = controller.plan(obs['poses_x'][0], obs['poses_y'][0], obs['poses_theta'][0])
         end = time.time()
 
-        print(end-start)
+        # print(end-start)
 
         obs, step_reward, done, info = env.step(np.array([[steer, speed]]))
         # laptime += step_reward
-        print(prim.shape)
+        # print(prim.shape)
         env.render(mode='human_fast', planner_data = [(controller.MP.x, controller.MP.y, prim)])
         # env.render(mode='human_fast')
 

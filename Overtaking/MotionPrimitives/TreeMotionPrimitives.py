@@ -1,10 +1,11 @@
 import torch
 import numpy as np
 from matplotlib import pyplot as plt
+from .MotionPrimitiveSuper import MotionPrimitiveSuper
 
 
-class TreeMotionPrimitive:
-    def __init__(self, speed_list, steering_list, depth=3, L=.33, p=.2, t_la=.8, k1=.0, k2=.0, k3=.0, m=.1, c=.12, local_grid_size = 7, resolution=(50, 50)):
+class TreeMotionPrimitive(MotionPrimitiveSuper):
+    def __init__(self, speed_list, steering_list, depth=3, L=.33, p=.2, t_la=10, k1=.0, k2=.0, k3=.0, m=.1, c=.12, local_grid_size = 7, resolution=(50, 50)):
         # speed and steering are lists of speed and steering values
         # depth : depth of the primitive tree
         #L : wheelbase of the car
@@ -15,66 +16,52 @@ class TreeMotionPrimitive:
         # k3 : exterior std scaling with speed
         # m : path length std scaling
         # c : width of the car
+        self.depth = depth
 
-        self.L = L
-        self.p = p
-        self.t_la = t_la
-        self.k1 = k1
-        self.k2 = k2
-        self.k3 = k3
-        self.m = m
-        self.c = c
-        self.local_grid_size = local_grid_size
-        self.resolution = resolution
-
-        #create sets of speeds and angles to create trees
-        speed_vals = torch.tensor(speed_list)
-        steering_vals = torch.tensor(steering_list)
-
-        speed, steering = torch.meshgrid(speed_vals, steering_vals)
-
-        speed = torch.flatten(speed)
-        steering = torch.flatten(steering)
+        super().__init__( speed_list, steering_list, L=L, p=p, t_la=t_la, k1=k1, k2=k2, k3=k3, m=m, c=c, local_grid_size = local_grid_size, resolution=resolution)
 
 
-        self.speeds = speed
-        self.steering_angles = steering
-
-        self.x, self.y = torch.meshgrid(torch.arange(0, local_grid_size+.0001, local_grid_size/resolution[0]), torch.arange(-local_grid_size/2,local_grid_size/2+.0001, local_grid_size/resolution[1]))
-
-        xy_offset = torch.zeros((torch.numel(speed), 2))
-        theta_offset = torch.ones((torch.numel(speed)))*0
+    def create_primitives(self):
+        xy_offset = torch.zeros((1, 2))
+        theta_offset = torch.zeros((1))
 
 
-        arc_length = torch.ones((torch.numel(speed)))*0
+        arc_length = torch.zeros((1))
 
         speeds = self.speeds
         steering_angles = self.steering_angles
 
-        for d in range(depth):
+        primitives = torch.zeros((1, self.resolution[0]+1, self.resolution[1]+1))
 
-            new_primitives, xy_offset, theta_offset, arc_length = self.create_primitives(speeds, steering_angles, xy_offset, theta_offset, arc_length)
-            if(d>0):
-                primitives += new_primitives
-            else:
-                primitives = new_primitives
-            primitives, speeds, steering_angles, xy_offset, theta_offset, arc_length = self.create_next_level_input(speeds, steering_angles, primitives, xy_offset, theta_offset, arc_length)
+        for d in range(self.depth):
+            primitives, speeds, steering_angles, xy_offset, theta_offset, arc_length = self.create_next_level_input(
+                speeds, steering_angles, primitives, xy_offset, theta_offset, arc_length)
+
+            if(d==0):
+                speeds = self.speeds
+                steering_angles = self.steering_angles
+
+            new_primitives, xy_offset, theta_offset, arc_length = self.generate_primitives(speeds, steering_angles, xy_offset, theta_offset, arc_length)
+
+            primitives+= new_primitives
+
+
 
         self.primitives = primitives
 
     def create_next_level_input(self, speed, steering, primitives, xy_offset, theta_offset, arc_length):
-        primitives = torch.repeat_interleave(primitives, speed.shape[0], dim=0)
-        arc_length = torch.repeat_interleave(arc_length, speed.shape[0], dim=0)
-        theta_offset = torch.repeat_interleave(theta_offset, speed.shape[0], dim=0)
-        xy_offset = torch.repeat_interleave(xy_offset, speed.shape[0], dim=0)
+        primitives = torch.repeat_interleave(primitives, self.speeds.shape[0], dim=0)
+        arc_length = torch.repeat_interleave(arc_length, self.speeds.shape[0], dim=0)
+        theta_offset = torch.repeat_interleave(theta_offset, self.speeds.shape[0], dim=0)
+        xy_offset = torch.repeat_interleave(xy_offset, self.speeds.shape[0], dim=0)
 
-        steering = steering.repeat(speed.shape[0])
-        speed = speed.repeat(speed.shape[0])
+        steering = steering.repeat(self.speeds.shape[0])
+        speed = speed.repeat(self.speeds.shape[0])
 
         return primitives, speed, steering, xy_offset, theta_offset, arc_length
 
 
-    def create_primitives(self, speed, steering, xy_offset, theta_offset, arc_length):
+    def generate_primitives(self, speed, steering, xy_offset, theta_offset, arc_length):
 
         # print(speed.shape, steering.shape, xy_offset.shape, theta_offset.shape, arc_length.shape )
         primitives = torch.zeros((torch.numel(speed), self.resolution[0] + 1, self.resolution[1] + 1))
@@ -120,7 +107,7 @@ class TreeMotionPrimitive:
         # a should be (N[straight/turn], res[0], res[1])
         s = self.get_s(speed, steering, grid_x, grid_y, arc_length, straight)
 
-        a = (torch.clamp_min(1 - self.p * s/speed.view(-1, 1, 1), 0))
+        a = (torch.clamp_min(1 - self.p * s, 0))
         # a = self.p*(torch.clamp_max(speed.view(-1,1,1)*self.t_la - s, 0))
 
         # this is to keep tuning consistent, negates the impact of p
@@ -188,11 +175,14 @@ class TreeMotionPrimitive:
 
         return xy_offset, theta_offset
 
+    def get_control_for(self, primitive_number):
+        return self.speeds[primitive_number//self.speeds.shape[0]**(self.depth-1)], self.steering_angles[primitive_number//self.speeds.shape[0]**(self.depth-1)]
+
 if __name__ == '__main__':
     import time
     t_b = time.time()
     # MP = MotionPrimitive(list(torch.arange(2,4,.05)),list(torch.arange(-.5,.5,.05)) )
-    MP = TreeMotionPrimitive([2.], [0.0,0.1])
+    MP = TreeMotionPrimitive([2.], [0.0,.2])
 
     test_offset = torch.tensor([[0.,0.]])
     test_theta_offset = torch.tensor([0.])
@@ -204,8 +194,9 @@ if __name__ == '__main__':
     # print(t_a-t_b)
 
     # print(MP.primitives.shape)
-    print(MP.steering_angles)
-    plt.imshow(np.array(MP.primitives[12]))
-    plt.colorbar()
+    for i in range(min(MP.primitives.shape[0],20)):
+        plt.figure()
+        plt.imshow(np.array(MP.primitives[i]))
+        plt.colorbar()
 
     plt.show()
