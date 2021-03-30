@@ -6,7 +6,7 @@ from .PrimitiveBasedControllerSuper import PrimitiveBasedControllerSuper
 from ..Util import LocalField
 
 
-class PureRiskController(PrimitiveBasedControllerSuper):
+class PureRewardController(PrimitiveBasedControllerSuper):
 
     def __init__(self, f1map, speeds, angles, local_grid_world_size = 5, resolution=100):
         ## from renderer.py in f1tenth gym for loading map image
@@ -16,13 +16,12 @@ class PureRiskController(PrimitiveBasedControllerSuper):
     def initialize_primitives(self, speeds, angles):
         self.MP = MotionPrimitive(speeds, angles,L=.33, p=1, t_la=2.5, k1=.2, k2=.3, k3=.1, m=.1, c=.12, resolution = (self.resolution, self.resolution), local_grid_size=self.local_grid_size)
 
-
     def plan(self, pose):
-        local_obstacles = self.map.sample_obstacles(pose, self.local_grid_size, self.resolution)
+        local_reward = self.map.sample_reward(pose, self.local_grid_size, self.resolution)
 
-        risk = self.get_risks(local_obstacles)
+        reward = self.get_rewards(local_reward)
 
-        control_choice = torch.argmin(risk)
+        control_choice = torch.argmax(reward)
         speed, angle = self.MP.get_control_for(control_choice)
 
 

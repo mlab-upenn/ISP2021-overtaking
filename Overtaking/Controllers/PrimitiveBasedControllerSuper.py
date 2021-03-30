@@ -33,9 +33,13 @@ class PrimitiveBasedControllerSuper():
         self.MP = MotionPrimitive(speeds, angles, resolution=(self.resolution, self.resolution),
                                   local_grid_size=self.local_grid_size)
 
-    def get_risks(self, local_grid):
-        risk = torch.sum(self.MP.primitives.transpose(1,2)*local_grid, dim=(1,2)) / (torch.sum(self.MP.primitives,dim=(1,2)))
+    def get_risks(self, local_obstacles):
+        risk = torch.sum(self.MP.primitives.transpose(1,2)*local_obstacles, dim=(1,2)) / (torch.sum(self.MP.primitives,dim=(1,2)))
         return risk
+
+    def get_rewards(self, local_rewards):
+        reward = torch.sum(self.MP.primitives.transpose(1,2)*local_rewards, dim=(1,2)) / (torch.sum(self.MP.primitives,dim=(1,2)))
+        return reward
 
     def get_dynamic_risks(self, pose, time_threshold):
         sampled_opp_time_field = LocalField.sample_against_data(self.opp_time_field.unsqueeze(0).unsqueeze(0),

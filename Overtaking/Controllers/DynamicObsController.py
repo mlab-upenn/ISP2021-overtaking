@@ -4,7 +4,6 @@ from matplotlib import pyplot as plt
 from ..MotionPrimitives.MotionPrimitives import MotionPrimitive
 from .PrimitiveBasedControllerSuper import PrimitiveBasedControllerSuper
 
-from ..Util import LocalField
 class DynamicObstacleController(PrimitiveBasedControllerSuper):
 
     def __init__(self, f1map, speeds, angles, local_grid_world_size = 5, resolution=70):
@@ -21,13 +20,13 @@ class DynamicObstacleController(PrimitiveBasedControllerSuper):
     def plan(self, pose):
 
 
-        local_grid = self.map.sample_obstacles(pose, self.local_grid_size, self.resolution)
+        local_obstacles = self.map.sample_obstacles(pose, self.local_grid_size, self.resolution)
         time_thresh = .3
         dynamic_scaling_bonus = 5
 
         dynamic_risk = self.get_dynamic_risks(pose, time_thresh)*dynamic_scaling_bonus
 
-        risk = self.get_risks(local_grid)
+        risk = self.get_risks(local_obstacles)
 
         cost = risk+dynamic_risk
 

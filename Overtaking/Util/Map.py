@@ -64,17 +64,27 @@ class Map():
         plt.show(block=True)
 
     def sample_obstacles(self, pose, local_grid_size, resolution):
+        local_obstacles = self.sample_from_map(self.image, pose, local_grid_size, resolution)
+        local_obstacles = torch.round(local_obstacles/255)
+        local_obstacles = -(local_obstacles - 1).squeeze()
+        return local_obstacles
+
+    def sample_reward(self, pose, local_grid_size, resolution):
+        local_reward = self.sample_from_map(self.reward, pose, local_grid_size, resolution)
+        return local_reward
+
+    def sample_from_map(self, map_image, pose, local_grid_size, resolution):
         sample_grid = generate_local_affine_grid(pose[2], resolution)
         map_size = self.resolution * torch.tensor([self.width, self.height])
         scaled_position = (pose[:2] - self.origin) / (map_size / 2)
         sample_grid = sample_grid * (local_grid_size / map_size) \
                       - torch.tensor([1, 1]) + scaled_position
-        local_grid = torch.nn.functional.grid_sample(self.image, 
-                                                     sample_grid, 
+        local_grid = torch.nn.functional.grid_sample(map_image,
+                                                     sample_grid,
                                                      mode='nearest')
-        local_grid = torch.round(local_grid / 255)
-        local_grid = -(local_grid - 1).squeeze()
         return local_grid
+
+
 
     @staticmethod
     @njit(fastmath=False, cache=True)
