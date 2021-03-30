@@ -1,11 +1,12 @@
 import torch
 import yaml
+import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 from argparse import Namespace
 from Overtaking.Util.LocalField import generate_local_affine_grid
-from numba import njit\
+from numba import njit
 
 
 class Map():
@@ -39,16 +40,12 @@ class Map():
         self.height = self.image.shape[2]
         self.width = self.image.shape[3]
 
-        # calculate reward
-        self.reward = self.image.clone()
-
-        segment_lengths = np.linalg.norm(self.waypoints[1:, :] - self.waypoints[:-1, :], axis=1)
-        for i in range(self.width):
-            for j in range(self.height):
-                if self.reward[0, 0, j, i] > 0:
-                    position = self.resolution * np.array([i, j]) + self.origin
-                    nearest_point, _, _, segment_idx = Map._nearest_point_on_trajectory(position, self.waypoints)
-                    self.reward[0, 0, j, i] = np.sum(segment_lengths[:segment_idx]) + np.linalg.norm(self.waypoints[segment_idx, :] - position)
+        # load or calculate reward
+        try:
+            self.reward = np.load(self.path + '.npy')
+        except:
+            self.generate_reward_map()
+            np.save(self.path + '.npy', self.reward)
 
     def display(self):
         fig, axes = plt.subplots(nrows=2, figsize=(4, 6))
@@ -62,6 +59,19 @@ class Map():
         plt.colorbar(im, ax=axes.ravel().tolist())  
         [ax.set_axis_off() for ax in axes.ravel()]
         plt.show(block=True)
+
+    def generate_reward_map(self):
+        self.reward = self.image.clone()
+        segment_lengths = np.linalg.norm(self.waypoints[1:, :] - \
+                                         self.waypoints[:-1, :], axis=1)
+        for i in range(self.width):
+            for j in range(self.height):
+                if self.reward[0, 0, j, i] > 0:
+                    position = self.resolution * np.array([i, j]) + self.origin
+                    nearest_point, seg = Map._nearest_point_on_trajectory(
+                        position, self.waypoints)
+                    self.reward[0, 0, j, i] = np.sum(segment_lengths[:seg]) + \
+                        np.linalg.norm(self.waypoints[seg, :] - position)
 
     def sample_obstacles(self, pose, local_grid_size, resolution):
         local_obstacles = self.sample_from_map(self.image, pose, local_grid_size, resolution)
@@ -119,7 +129,7 @@ class Map():
             temp = point - projections[i]
             dists[i] = np.sqrt(np.sum(temp*temp))
         min_dist_segment = np.argmin(dists)
-        return projections[min_dist_segment], dists[min_dist_segment], t[min_dist_segment], min_dist_segment
+        return projections[min_dist_segment], min_dist_segment
 
 
 if __name__ == '__main__':
