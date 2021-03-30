@@ -18,8 +18,13 @@ class PureRewardController(PrimitiveBasedControllerSuper):
 
     def plan(self, pose):
         local_reward = self.map.sample_reward(pose, self.local_grid_size, self.resolution)
+        cur_reward = self.map.sample_reward_at_pose(pose, self.local_grid_size)
+        reward = self.get_rewards(local_reward- cur_reward)
+        print('current reward: ', cur_reward)
 
-        reward = self.get_rewards(local_reward)
+        reward[reward < 0] += torch.max(reward)
+
+        print(torch.max(reward))
 
         control_choice = torch.argmax(reward)
         speed, angle = self.MP.get_control_for(control_choice)

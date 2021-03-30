@@ -18,4 +18,4 @@ if __name__ == '__main__':
     # intstantiate controllers for agents
     controller = PRC.PureRewardController(f1map, speeds=speeds, angles=angles)
 
-    SimulationBase.SimulateEgo(f1map, controller, np.array([0, -4, 0]))
+    SimulationBase.SimulateEgo(f1map, controller, np.array([0, 0, 0]))

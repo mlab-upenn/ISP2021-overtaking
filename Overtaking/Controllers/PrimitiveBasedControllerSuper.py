@@ -39,6 +39,7 @@ class PrimitiveBasedControllerSuper():
 
     def get_rewards(self, local_rewards):
         reward = torch.sum(self.MP.primitives.transpose(1,2)*local_rewards, dim=(1,2)) / (torch.sum(self.MP.primitives,dim=(1,2)))
+
         return reward
 
     def get_dynamic_risks(self, pose, time_threshold):

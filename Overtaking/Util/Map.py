@@ -42,10 +42,13 @@ class Map():
 
         # load or calculate reward
         try:
-            self.reward = np.load(self.path + '.npy')
+            self.reward = torch.tensor(np.load(self.path + '.npy'))
         except:
             self.generate_reward_map()
+
             np.save(self.path + '.npy', self.reward)
+
+            self.reward = torch.tensor(self.reward)
 
     def display(self):
         fig, axes = plt.subplots(nrows=2, figsize=(4, 6))
@@ -81,7 +84,7 @@ class Map():
 
     def sample_reward(self, pose, local_grid_size, resolution):
         local_reward = self.sample_from_map(self.reward, pose, local_grid_size, resolution)
-        return local_reward
+        return local_reward.squeeze()
 
     def sample_from_map(self, map_image, pose, local_grid_size, resolution):
         sample_grid = generate_local_affine_grid(pose[2], resolution)
@@ -94,7 +97,15 @@ class Map():
                                                      mode='nearest')
         return local_grid
 
-
+    def sample_reward_at_pose(self, pose, local_grid_size):
+        sample_grid = generate_local_affine_grid(pose[2], 0)
+        map_size = self.resolution * torch.tensor([self.width, self.height])
+        scaled_position = (pose[:2] - self.origin) / (map_size / 2)
+        sample_grid = sample_grid* (local_grid_size / map_size)  - torch.tensor([1, 1]) + scaled_position
+        local_grid = torch.nn.functional.grid_sample(self.reward,
+                                                     sample_grid,
+                                                     mode='nearest')
+        return local_grid.flatten()
 
     @staticmethod
     @njit(fastmath=False, cache=True)
