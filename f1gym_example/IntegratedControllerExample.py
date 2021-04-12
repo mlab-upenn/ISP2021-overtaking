@@ -2,9 +2,6 @@ import gym
 import time
 import torch
 import numpy as np
-from Overtaking.Controllers import PureRiskController as PRC
-from Overtaking.Controllers import DynamicObsController as DOC
-from Overtaking.Controllers import TreePrimitiveController as TPC
 from Overtaking.Controllers import PrimitiveController as PC
 from Overtaking.MotionPrimitives import TreeMotionPrimitives as TMP
 from Overtaking.MotionPrimitives import MotionPrimitives as MP

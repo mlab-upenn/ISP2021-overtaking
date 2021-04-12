@@ -56,7 +56,7 @@ def sample_against_data2(data, resolution, local_scale,
     # sample_grid = sample_grid - torch.tensor([torch.cos(-opp_rel_pose_world[2]), torch.sin(-opp_rel_pose_world[2])])
 
 
-    sample_grid = (sample_grid + ego_rel_pose_data)*(local_scale/data_scale) - torch.tensor([1,0])
+    sample_grid = (sample_grid + ego_rel_pose_data)*(local_scale/data_scale) - torch.tensor([1,0]).to(sample_grid.device)
 
     sampled_data = torch.nn.functional.grid_sample(data, sample_grid.float())
     off_mask = torch.any(torch.abs(sample_grid) > 1, 3).squeeze()
