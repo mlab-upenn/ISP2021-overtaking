@@ -43,9 +43,16 @@ class MotionPrimitiveSuper:
         self.speeds = speed
         self.steering_angles = steering
 
-        self.create_primitives()
+        self.primitives = self.create_primitives()
 
         self.time_field = self.create_time_field()
+
+        if(torch.cuda.is_available()):
+            self.primitives = self.primitives.cuda()
+            self.time_field = self.time_field.cuda()
+            self.speeds = self.speeds.cuda()
+            self.steering_angles = self.steering_angles.cuda()
+
 
     def create_time_field(self):
         r = (self.x**2 + self.y**2)/(2*torch.abs(self.y))
