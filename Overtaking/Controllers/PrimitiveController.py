@@ -42,20 +42,7 @@ class PrimitiveController(PrimitiveBasedControllerSuper):
             reward = self.get_rewards(self.map.sample_reward(pose, self.local_grid_size, self.resolution))
             cost -= reward
 
-
-        # dyn_risk_scale = .05
-        #
-        # local_obstacles_scale = 10
-
-
-
-        # cost = risk*local_obstacles_scale+dyn_risk*dyn_risk_scale
-
-        # cost_scale = 1
-
-        # cost = cost*cost_scale-reward
         control_choice = torch.argmin(cost)
-        # print(reward[control_choice])
         speed, angle = self.MP.get_control_for(control_choice)
 
 
