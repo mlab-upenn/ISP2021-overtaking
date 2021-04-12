@@ -43,7 +43,7 @@ class TreeMotionPrimitive(MotionPrimitiveSuper):
 
             new_primitives, xy_offset, theta_offset, arc_length = self.generate_primitives(speeds, steering_angles, xy_offset, theta_offset, arc_length)
 
-            primitives+= new_primitives
+            primitives = torch.maximum(new_primitives, primitives)
 
 
 
