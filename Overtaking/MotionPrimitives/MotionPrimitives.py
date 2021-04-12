@@ -42,7 +42,7 @@ class MotionPrimitive(MotionPrimitiveSuper):
             primitives[turn_mask] = turn_a * torch.exp(
                 -(torch.sqrt(self.x ** 2 + (self.y - R) ** 2) - torch.abs(R)) ** 2 / (2 * turn_sig ** 2))
 
-        self.primitives = primitives
+        self.primitives = primitives/torch.max(primitives)
 
     def get_a(self, speed, steering, straight):
         #a should be (N[straight/turn], res[0], res[1])
@@ -68,8 +68,8 @@ class MotionPrimitive(MotionPrimitiveSuper):
             # radius of a point in relation to turn center times sweep angle gives arc length
             #not clear which formulation is best
             # return torch.sqrt(self.x.unsqueeze(0)**2 + (R-self.y.unsqueeze(0))**2)*torch.atan2(self.x.unsqueeze(0), R-self.y.unsqueeze(0))
-            return torch.abs(R)*torch.min(torch.atan2(self.x.unsqueeze(0), self.y.unsqueeze(0)+R) , torch.atan2(self.x.unsqueeze(0), self.y.unsqueeze(0)-R))
-
+            # return torch.abs(R)*torch.min(torch.atan2(self.x.unsqueeze(0), self.y.unsqueeze(0)+R) , torch.atan2(self.x.unsqueeze(0), self.y.unsqueeze(0)-R))
+            return torch.abs(R) * torch.atan2(self.x, (R - self.y) * torch.sign(R))
         pass
 
     def get_sig(self, speed, steering, straight):

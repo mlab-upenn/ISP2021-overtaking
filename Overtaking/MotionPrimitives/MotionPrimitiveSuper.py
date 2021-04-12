@@ -30,7 +30,7 @@ class MotionPrimitiveSuper:
 
         #x goes from 0 to bounds, y goes from -bounds to bounds
         self.x, self.y = torch.meshgrid(torch.arange(0, local_grid_size+.0001, local_grid_size/resolution[0]), torch.arange(-local_grid_size/2,local_grid_size/2+.0001, local_grid_size/resolution[1]))
-
+        # self.x = self.x-.3
         speed_vals = torch.tensor(speed_list)
         steering_vals = torch.tensor(steering_list)
 

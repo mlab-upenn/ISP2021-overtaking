@@ -84,6 +84,7 @@ class Map():
 
     def sample_reward(self, pose, local_grid_size, resolution):
         local_reward = self.sample_from_map(self.reward, pose, local_grid_size, resolution)
+        
         return local_reward.squeeze()
 
     def sample_from_map(self, map_image, pose, local_grid_size, resolution):

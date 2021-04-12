@@ -5,7 +5,7 @@ from .MotionPrimitiveSuper import MotionPrimitiveSuper
 
 
 class TreeMotionPrimitive(MotionPrimitiveSuper):
-    def __init__(self, speed_list, steering_list, depth=3, L=.33, p=.2, t_la=10, k1=.0, k2=.0, k3=.0, m=.1, c=.12, local_grid_size = 7, resolution=(50, 50)):
+    def __init__(self, speed_list, steering_list, depth=3, L=.33, p=.2, t_la=1, k1=.0, k2=.0, k3=.0, m=.1, c=.12, local_grid_size = 7, resolution=(40, 40)):
         # speed and steering are lists of speed and steering values
         # depth : depth of the primitive tree
         #L : wheelbase of the car
@@ -94,7 +94,6 @@ class TreeMotionPrimitive(MotionPrimitiveSuper):
 
             local_xy[turn_mask, 0] = torch.sin(turn_angle)*R
 
-            print(local_xy.shape, turn_mask.shape, turn_angle.shape, speed.shape, R.shape)
             local_xy[turn_mask, 1] = (1-torch.cos(turn_angle))*R
 
             local_theta[turn_mask] = turn_angle

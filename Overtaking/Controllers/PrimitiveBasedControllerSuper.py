@@ -17,6 +17,8 @@ class PrimitiveBasedControllerSuper():
 
         self.initialize_primitives(speeds, angles)
 
+        self.opp_time_field =None
+
     def update_opponent_data(self, pose, plan, time_field, speed, turn, local_size):
         self.opp_pose = pose
         self.opp_plan = plan
@@ -43,20 +45,24 @@ class PrimitiveBasedControllerSuper():
         return reward
 
     def get_dynamic_risks(self, pose, time_threshold):
-        sampled_opp_time_field = LocalField.sample_against_data(self.opp_time_field.unsqueeze(0).unsqueeze(0),
-                                                                self.resolution, 1, self.opp_local_size,
-                                                                pose-self.opp_pose, -np.Inf)
-        sampled_opp_plan_field = LocalField.sample_against_data(self.opp_plan.unsqueeze(0).unsqueeze(0),
-                                                                self.resolution, 1, self.opp_local_size,
-                                                                pose-self.opp_pose, 0)
+        if(self.opp_time_field is None):
+            print('no opponent data')
+            return 0
+        sampled_opp_time_field = LocalField.sample_against_data2(self.opp_time_field.transpose(0,1).unsqueeze(0).unsqueeze(0),
+                                                                self.resolution, self.local_grid_size, self.opp_local_size,
+                                                                pose, self.opp_pose, -np.Inf)
+        #need to transpose because primitives have transposed axis compared to car coordinates
+        sampled_opp_plan_field = LocalField.sample_against_data2(self.opp_plan.transpose(0,1).unsqueeze(0).unsqueeze(0),
+                                                                self.resolution, self.local_grid_size, self.opp_local_size,
+                                                                pose, self.opp_pose, 0)
 
         ego_time_field = self.MP.time_field / self.MP.speeds.reshape((-1, 1, 1))
 
         time_mask = torch.abs(ego_time_field - sampled_opp_time_field) < time_threshold
-        intersection = self.MP.primitives * time_mask.repeat((self.MP.primitives.shape[0]//time_mask.shape[0],1,1)) * sampled_opp_plan_field.repeat(
+        intersection = self.MP.primitives* time_mask.repeat((self.MP.primitives.shape[0]//time_mask.shape[0],1,1)) * sampled_opp_plan_field.repeat(
             (self.MP.primitives.shape[0], 1, 1))
 
         dynamic_risk = torch.sum(intersection, dim=(1, 2))
 
-        return dynamic_risk
+        return dynamic_risk, sampled_opp_plan_field
 
