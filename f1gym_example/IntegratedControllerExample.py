@@ -3,6 +3,7 @@ import time
 import torch
 import numpy as np
 from Overtaking.Controllers import PrimitiveController as PC
+from Overtaking.Controllers import ParetoPrimitiveController as PPC
 from Overtaking.MotionPrimitives import TreeMotionPrimitives as TMP
 from Overtaking.MotionPrimitives import MotionPrimitives as MP
 import SimulationBase
@@ -34,6 +35,6 @@ if __name__ == '__main__':
 
     treeMotionPrimitives = TMP.TreeMotionPrimitive(speeds, angles, depth=depth, L=.33, p=.1, t_la=1, k1=.0, k2=.0, k3=.0, m=.1, c=.12, resolution=(resolution, resolution), local_grid_size=size)
 
-    controller = PC.PrimitiveController(f1map, treeMotionPrimitives, static_risk_factor=10, dynamic_risk_factor= 0.05, reward_factor=1, dynamic_risk_thresh=0.17, local_grid_world_size=size, resolution=resolution)
+    controller = PPC.ParetoPrimitiveController(f1map, treeMotionPrimitives, static_risk_factor=10, dynamic_risk_factor= 0.05, reward_factor=1, dynamic_risk_thresh=0.17, local_grid_world_size=size, resolution=resolution)
 
     SimulationBase.SimulateWithOpponent(f1map, controller, np.array([0, 2, 0]), opp_controller, np.array([0,6,0]))
