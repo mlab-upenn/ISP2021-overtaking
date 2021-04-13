@@ -11,21 +11,27 @@ from ..Util import LocalField
 class PrimitiveBasedControllerSuper():
 
     def __init__(self, f1map, speeds, angles, local_grid_size=5, resolution=70):
+
+        if(torch.cuda.is_available()):
+            self.device = torch.device('cuda:0')
+        else:
+            self.device = torch.device
+
         self.map = f1map
-        self.resolution = resolution
-        self.local_grid_size = local_grid_size
+        self.resolution = torch.tensor(resolution, device=self.device)
+        self.local_grid_size = torch.tensor(local_grid_size, device=self.device)
 
         self.initialize_primitives(speeds, angles)
 
         self.opp_time_field =None
 
     def update_opponent_data(self, pose, plan, time_field, speed, turn, local_size):
-        self.opp_pose = pose
-        self.opp_plan = plan
-        self.opp_time_field = time_field
-        self.opp_speed = speed
-        self.opp_turn = turn
-        self.opp_local_size = local_size
+        self.opp_pose = pose.to(self.device)
+        self.opp_plan = plan.to(self.device)
+        self.opp_time_field = time_field.to(self.device)
+        self.opp_speed = speed.to(self.device)
+        self.opp_turn = turn.to(self.device)
+        self.opp_local_size = local_size.to(self.device)
 
     def plan(self, x, y, theta):
         pass

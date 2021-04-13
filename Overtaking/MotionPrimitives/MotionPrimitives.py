@@ -42,7 +42,7 @@ class MotionPrimitive(MotionPrimitiveSuper):
             primitives[turn_mask] = turn_a * torch.exp(
                 -(torch.sqrt(self.x ** 2 + (self.y - R) ** 2) - torch.abs(R)) ** 2 / (2 * turn_sig ** 2))
 
-        self.primitives = primitives/torch.max(primitives)
+        return primitives/torch.max(primitives)
 
     def get_a(self, speed, steering, straight):
         #a should be (N[straight/turn], res[0], res[1])

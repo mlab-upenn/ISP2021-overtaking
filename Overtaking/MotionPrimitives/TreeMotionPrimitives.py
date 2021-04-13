@@ -47,7 +47,7 @@ class TreeMotionPrimitive(MotionPrimitiveSuper):
 
 
 
-        self.primitives = primitives
+        return primitives
 
     def create_next_level_input(self, speed, steering, primitives, xy_offset, theta_offset, arc_length):
         primitives = torch.repeat_interleave(primitives, self.speeds.shape[0], dim=0)

@@ -74,7 +74,7 @@ def generate_local_affine_grid(theta, resolution):
     """
     T = torch.tensor([[torch.cos(theta), -torch.sin(theta), torch.cos(theta)],
                         [torch.sin(theta), torch.cos(theta), torch.sin(theta)]]).unsqueeze(0)
-    return torch.nn.functional.affine_grid(T, torch.Size((1, 1, resolution + 1, resolution + 1)))
+    return torch.nn.functional.affine_grid(T, torch.Size((1, 1, resolution + 1, resolution + 1)), device = resolution.device)
 
 def get_local_pose(ego_pose, pose):
     """
