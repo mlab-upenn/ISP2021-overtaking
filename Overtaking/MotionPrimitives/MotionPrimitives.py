@@ -3,6 +3,7 @@ import torch
 import numpy as np
 from matplotlib import pyplot as plt
 from .MotionPrimitiveSuper import MotionPrimitiveSuper
+# from .MotionPrimitiveSuper import MotionPrimitiveSuper
 
 
 class MotionPrimitive(MotionPrimitiveSuper):
@@ -16,7 +17,17 @@ class MotionPrimitive(MotionPrimitiveSuper):
         # k3 : exterior std scaling with speed
         # m : path length std scaling
         # c : width of the car
-        super().__init__( speed_list, steering_list, L=L, p=p, t_la=t_la, k1=k1, k2=k2, k3=k3, m=m, c=c, local_grid_size = local_grid_size, resolution=resolution)
+        self.arc_lengths_local = torch.zeros(len(speed_list)*len(steering_list))
+
+        speed_vals = torch.tensor(speed_list)
+        steering_vals = torch.tensor(steering_list)
+
+        speeds, steering_angles = torch.meshgrid(speed_vals, steering_vals)
+
+        speeds = speeds.flatten()
+        steering_angles = steering_angles.flatten()
+
+        super().__init__( speeds, steering_angles, L=L, p=p, t_la=t_la, k1=k1, k2=k2, k3=k3, m=m, c=c, local_grid_size = local_grid_size, resolution=resolution)
 
 
     def create_primitives(self):
@@ -31,8 +42,6 @@ class MotionPrimitive(MotionPrimitiveSuper):
         turn_sig = self.get_sig(self.speeds[turn_mask], self.steering_angles[turn_mask], False)
         turn_a = self.get_a(self.speeds[turn_mask], self.steering_angles[turn_mask], False)
 
-        print(turn_a)
-
         if (torch.any(straight_mask)):
             primitives[straight_mask] = straight_a * torch.exp(-(self.y ** 2) / (2 * straight_sig ** 2))
 
@@ -45,48 +54,22 @@ class MotionPrimitive(MotionPrimitiveSuper):
         return primitives/torch.max(primitives)
 
     def get_a(self, speed, steering, straight):
-        #a should be (N[straight/turn], res[0], res[1])
-        s = self.get_s(speed,steering, straight)
-
-        a = self.p*(torch.clamp_min(speed.view(-1,1,1)*self.t_la - s, 0))
-        # a = self.p*(torch.clamp_max(speed.view(-1,1,1)*self.t_la - s, 0))
-
-
-        #this is to keep tuning consistent, negates the impact of p
-        normalize = self.p*(speed.view(-1,1,1)*self.t_la)
-
+        a = super().get_a(speed, steering, self.x, self.y, self.arc_lengths_local[:len(speed)], straight)
         return a#/normalize
 
 
-    def get_s(self, speed, steering, straight):
-        #s should be (N[straight/turn], res[0], res[1])
-
-        if(straight):
-            return self.x
-        else:
-            R = self.get_R(speed,steering).view(-1,1,1)
-            # radius of a point in relation to turn center times sweep angle gives arc length
-            #not clear which formulation is best
-            # return torch.sqrt(self.x.unsqueeze(0)**2 + (R-self.y.unsqueeze(0))**2)*torch.atan2(self.x.unsqueeze(0), R-self.y.unsqueeze(0))
-            # return torch.abs(R)*torch.min(torch.atan2(self.x.unsqueeze(0), self.y.unsqueeze(0)+R) , torch.atan2(self.x.unsqueeze(0), self.y.unsqueeze(0)-R))
-            return torch.abs(R) * torch.atan2(self.x, (R - self.y) * torch.sign(R))
-        pass
+    def get_s(self, speed, steering, grid_x, grid_y, arc_length, straight):
+        # this signature just matches the most general case, this particular implementation only requires class vars
+        return super(MotionPrimitive, self).get_s(speed, steering, self.x, self.y, self.arc_lengths_local[:len(speed)], straight)
 
     def get_sig(self, speed, steering, straight):
-        #sig should be (N, res[0], res[1])
-        #just use K1 for now
 
-        s = self.get_s(speed, steering, straight)
-        R = self.get_R(speed,steering).view(-1,1,1)
-        real_R = torch.sqrt(self.x.unsqueeze(0)**2 + (R-self.y.unsqueeze(0))**2)
-        k = torch.where(torch.abs(R)>real_R, torch.tensor(self.k1).view(-1,1,1), self.k2 + self.k3*speed.view(-1,1,1))
-        sig = (self.m + k*torch.abs(steering.view(-1,1,1)))*s + self.c
-
+        sig = super(MotionPrimitive, self).get_sig(speed, steering, self.x, self.y, self.arc_lengths_local[:len(speed)], straight)
         return sig
 
     def get_R(self, speed, steering):
         #only valid for steering[turn_mask]
-        R = self.L/torch.tan(steering)
+        R = super(MotionPrimitive, self).get_R(speed, steering)
         return R
 
     def get_control_for(self, primitive_number):

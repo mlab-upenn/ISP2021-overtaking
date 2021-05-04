@@ -26,18 +26,17 @@ def SimulateWithOpponent(f1map, ego_controller, ego_start_offset, opp_controller
         ego_controller.update_opponent_data(poses[1], opp_prim, opp_controller.MP.time_field / opp_speed, opp_speed,
                                         opp_steer, opp_controller.MP.local_grid_size)
         speed, steer, prim = ego_controller.plan(poses[0])
-
+        print(speed)
         end = time.time()
 
         # print(end-start)
 
-        obs, step_reward, done, info = env.step(np.array([[steer, speed], [opp_steer, opp_speed]]))
+        obs, step_reward, done, info = env.step(np.array([[steer.detach().cpu(), speed.detach().cpu()], [opp_steer.detach().cpu(), opp_speed.detach().cpu()]]))
         # laptime += step_reward
 
-        print(speed)
 
-        planners = [(ego_controller.MP.x, ego_controller.MP.y, prim),
-                    (opp_controller.MP.x, opp_controller.MP.y, opp_prim)]
+        planners = [(ego_controller.MP.x.detach().cpu(), ego_controller.MP.y.detach().cpu(), prim.detach().cpu()),
+                    (opp_controller.MP.x.detach().cpu(), opp_controller.MP.y.detach().cpu(), opp_prim.detach().cpu())]
         # planners = [(ego_controller.MP.x, ego_controller.MP.y, prim)]
         env.render(mode='human_fast', planner_data=planners)
 

@@ -27,40 +27,33 @@ class Map():
         if(torch.cuda.is_available()):
             self.device = torch.device('cuda:0')
         else:
-            self.device = torch.device
+            self.device = torch.device('cpu')
         # open map
         with open(self.path + '.yaml', 'r') as yaml_stream:
             try:
                 map_metadata = yaml.safe_load(yaml_stream)
-                self.resolution = torch.tensor(map_metadata['resolution'], device = self.device)
-                self.origin = torch.tensor(np.array(map_metadata['origin'])[:2], device= self.device)
+                self.resolution = torch.tensor(map_metadata['resolution'])
+                self.origin = torch.tensor(np.array(map_metadata['origin'])[:2])
             except yaml.YAMLError as error:
                 print(error)
 
         # load map image
         self.image = torch.tensor(np.array(Image.open(self.path + self.ext)
                         .transpose(Image.FLIP_TOP_BOTTOM))
-                        .astype(np.float64), device = self.device).unsqueeze(0).unsqueeze(0)
-        self.height = torch.tensor(self.image.shape[2], device=self.device)
-        self.width = torch.tensor(self.image.shape[3], device=self.device)
+                        .astype(np.float64)).unsqueeze(0).unsqueeze(0)
+        self.height = torch.tensor(self.image.shape[2])
+        self.width = torch.tensor(self.image.shape[3])
 
         # load or calculate reward
         try:
-            self.reward = torch.tensor(np.load(self.path + '.npy'), device = self.device)
+            self.reward = torch.tensor(np.load(self.path + '.npy'))
         except:
             self.generate_reward_map()
 
             np.save(self.path + '.npy', self.reward)
 
-            self.reward = torch.tensor(self.reward, device=self.device)
+            self.reward = torch.tensor(self.reward)
 
-        if(torch.cuda.is_available()):
-            print(self.image.shape)
-            # self.reward = self.reward.cuda()
-            # self.image = self.image.cuda()
-            # self.resolution = self.resolution.cuda()
-            # self.origin = self.origin.cuda()
-            # self.waypoints = self.waypoints.cuda()
 
 
     def display(self):
@@ -102,24 +95,23 @@ class Map():
 
     def sample_from_map(self, map_image, pose, local_grid_size, resolution):
         sample_grid = generate_local_affine_grid(pose[2], resolution)
-        map_size = self.resolution * torch.tensor([self.width, self.height], device = self.device)
+        map_size = self.resolution * torch.tensor([self.width, self.height])
         scaled_position = (pose[:2] - self.origin) / (map_size / 2)
-        print(sample_grid.device, local_grid_size.device, map_size.device, scaled_position.device, self.device)
         sample_grid = sample_grid * (local_grid_size / map_size) \
-                      - torch.tensor([1, 1], device = self.device) + scaled_position
+                      - torch.tensor([1, 1]) + scaled_position
         local_grid = torch.nn.functional.grid_sample(map_image,
                                                      sample_grid,
                                                      mode='nearest')
         return local_grid
 
     def sample_reward_at_pose(self, pose, local_grid_size):
-        sample_grid = generate_local_affine_grid(pose[2], 0)
-        map_size = self.resolution * torch.tensor([self.width, self.height], device=self.device)
+        sample_grid = generate_local_affine_grid(pose[2], torch.tensor(0))
+        map_size = self.resolution * torch.tensor([self.width, self.height])
         scaled_position = (pose[:2] - self.origin) / (map_size / 2)
-        sample_grid = sample_grid* (local_grid_size / map_size)  - torch.tensor([1, 1], device = self.device) + scaled_position
+        sample_grid = sample_grid* (local_grid_size / map_size)  - torch.tensor([1, 1]) + scaled_position
         local_grid = torch.nn.functional.grid_sample(self.reward,
                                                      sample_grid,
-                                                     mode='nearest')
+                                                     mode='bilinear')
         return local_grid.flatten()
 
     @staticmethod
@@ -160,4 +152,3 @@ class Map():
 
 if __name__ == '__main__':
     Map('config_example_map_filled.yaml').display()
-    

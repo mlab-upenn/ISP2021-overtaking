@@ -1,7 +1,8 @@
 import torch
 import numpy as np
 from matplotlib import pyplot as plt
-from .MotionPrimitiveSuper import MotionPrimitiveSuper
+from .MotionPrimitives import MotionPrimitiveSuper
+import time
 
 
 class TreeMotionPrimitive(MotionPrimitiveSuper):
@@ -18,7 +19,19 @@ class TreeMotionPrimitive(MotionPrimitiveSuper):
         # c : width of the car
         self.depth = depth
 
-        super().__init__( speed_list, steering_list, L=L, p=p, t_la=t_la, k1=k1, k2=k2, k3=k3, m=m, c=c, local_grid_size = local_grid_size, resolution=resolution)
+        #check if enumeration of specific primitives has already been done (from ExplicitPrimitiveSet)
+        if(len(speed_list.shape) > 1 and speed_list.shape[1] > 1):
+            speeds = speed_list
+            steering_angles = steering_list
+        else:
+            speed_vals = torch.tensor(speed_list)
+            steering_vals = torch.tensor(steering_list)
+
+            speeds, steering_angles = torch.meshgrid(speed_vals, steering_vals)
+            speeds = speeds.flatten()
+            steering_angles = steering_angles.flatten()
+
+        super().__init__( speeds, steering_angles, L=L, p=p, t_la=t_la, k1=k1, k2=k2, k3=k3, m=m, c=c, local_grid_size = local_grid_size, resolution=resolution)
 
 
     def create_primitives(self):
@@ -60,10 +73,10 @@ class TreeMotionPrimitive(MotionPrimitiveSuper):
 
         return primitives, speed, steering, xy_offset, theta_offset, arc_length
 
-
     def generate_primitives(self, speed, steering, xy_offset, theta_offset, arc_length):
 
         # print(speed.shape, steering.shape, xy_offset.shape, theta_offset.shape, arc_length.shape )
+
         primitives = torch.zeros((torch.numel(speed), self.resolution[0] + 1, self.resolution[1] + 1))
         turn_mask = torch.abs(steering) > 0.01
         straight_mask = torch.abs(steering) <= 0.01
@@ -72,6 +85,8 @@ class TreeMotionPrimitive(MotionPrimitiveSuper):
 
         local_theta = torch.zeros((torch.numel(speed)))
         local_xy = torch.zeros((torch.numel(speed), 2))
+
+
 
         if (torch.any(straight_mask)):
             straight_sig = self.get_sig(speed[straight_mask], steering[straight_mask], grid_x[straight_mask], grid_y[straight_mask], arc_length[straight_mask], True)
@@ -86,8 +101,10 @@ class TreeMotionPrimitive(MotionPrimitiveSuper):
             turn_sig = self.get_sig(speed[turn_mask], steering[turn_mask], grid_x[turn_mask], grid_y[turn_mask], arc_length[turn_mask], False)
             turn_a = self.get_a(speed[turn_mask], steering[turn_mask], grid_x[turn_mask], grid_y[turn_mask], arc_length[turn_mask], False)
             R = self.get_R(speed[turn_mask], steering[turn_mask]).view(-1, 1, 1)
+
             primitives[turn_mask] = turn_a * torch.exp(
                 -(torch.sqrt(grid_x[turn_mask] ** 2 + (grid_y[turn_mask] - R) ** 2) - torch.abs(R)) ** 2 / (2 * turn_sig ** 2))
+            # print('TreeMotionprimitve turning risk comp in: ', t_a-t_b)
 
             R = R.flatten()
             turn_angle = speed[turn_mask]*self.t_la/R
@@ -102,54 +119,6 @@ class TreeMotionPrimitive(MotionPrimitiveSuper):
         new_xy_offset, new_theta_offset = self.calculate_new_distance(xy_offset, theta_offset, local_xy, local_theta)
         return primitives, new_xy_offset, new_theta_offset, arc_length
 
-    def get_a(self, speed, steering, grid_x, grid_y, arc_length, straight):
-        # a should be (N[straight/turn], res[0], res[1])
-        s = self.get_s(speed, steering, grid_x, grid_y, arc_length, straight)
-
-        a = (torch.clamp_min(1 - self.p * s, 0))
-        # a = self.p*(torch.clamp_max(speed.view(-1,1,1)*self.t_la - s, 0))
-
-        # this is to keep tuning consistent, negates the impact of p
-        # normalize = self.p * (speed.view(-1, 1, 1) * self.t_la)
-
-        a = torch.clamp_min(a ,0)
-        # print(a.shape, s.shape)
-        a[s-arc_length.reshape(-1,1,1)<0] = 0
-
-        a[(s-arc_length.reshape(-1,1,1))/speed.view(-1, 1, 1) > self.t_la] = 0
-        return a
-
-    #old version
-    def get_s(self, speed, steering, grid_x, grid_y, arc_length, straight):
-        #s should be (N[straight/turn], res[0], res[1])
-
-        if(straight):
-            return grid_x + arc_length.reshape(-1,1,1)
-        else:
-            R = self.get_R(speed,steering).view(-1,1,1)
-            # radius of a point in relation to turn center times sweep angle gives arc length
-            #not clear which formulation is best
-
-            return torch.abs(R)*torch.atan2(grid_x, (R-grid_y)*torch.sign(R))+ arc_length.reshape(-1,1,1)
-
-    def get_sig(self, speed, steering, grid_x, grid_y, arc_length, straight):
-        #sig should be (N, res[0], res[1])
-        #just use K1 for now
-
-        s = self.get_s(speed, steering, grid_x, grid_y, arc_length, straight) #
-        R = self.get_R(speed,steering).view(-1,1,1)
-        real_R = torch.sqrt(grid_x.unsqueeze(0)**2 + (R-grid_y.unsqueeze(0))**2)
-        k = torch.where(torch.abs(R)>real_R, torch.tensor(self.k1).view(-1,1,1), self.k2 + self.k3*speed.view(-1,1,1))
-        sig = (self.m + k*torch.abs(steering.view(-1,1,1)))*s + self.c
-
-        return sig
-
-
-    #old version
-    def get_R(self, speed, steering):
-        # only valid for steering[turn_mask]
-        R = self.L / torch.tan(steering)
-        return R
 
 
     def translate_xy(self, x, y, xy_offset, theta_offset):
@@ -167,10 +136,10 @@ class TreeMotionPrimitive(MotionPrimitiveSuper):
     def calculate_new_distance(self, xy_offset, theta_offset, local_xy, local_theta):
 
 
-        xy_offset[:,0] += torch.cos(theta_offset)*local_xy[:,0] - torch.sin(theta_offset)*local_xy[:,1]
-        xy_offset[:,1] += torch.sin(theta_offset)*local_xy[:,0] + torch.cos(theta_offset)*local_xy[:,1]
+        xy_offset[:,0] = xy_offset[:,0]+torch.cos(theta_offset)*local_xy[:,0] - torch.sin(theta_offset)*local_xy[:,1]
+        xy_offset[:,1] = xy_offset[:,1] + torch.sin(theta_offset)*local_xy[:,0] + torch.cos(theta_offset)*local_xy[:,1]
 
-        theta_offset += local_theta
+        theta_offset = theta_offset+ local_theta
 
         return xy_offset, theta_offset
 

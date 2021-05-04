@@ -24,7 +24,6 @@ def sample_against_data(data, resolution, local_scale,
     data_offset[[0,1]] = data_offset[[1,0]]
     aff_g = ((generate_local_affine_grid(local_pose[2], resolution) - data_offset ))* relative_scale
 
-    print(ego_pose)
     if(ego_pose[1] > 5):
         plt.scatter(aff_g[:,:,:,0], aff_g[:,:,:,1])
 
@@ -74,7 +73,7 @@ def generate_local_affine_grid(theta, resolution):
     """
     T = torch.tensor([[torch.cos(theta), -torch.sin(theta), torch.cos(theta)],
                         [torch.sin(theta), torch.cos(theta), torch.sin(theta)]]).unsqueeze(0)
-    return torch.nn.functional.affine_grid(T, torch.Size((1, 1, resolution + 1, resolution + 1)), device = resolution.device)
+    return torch.nn.functional.affine_grid(T, torch.Size((1, 1, resolution + 1, resolution + 1))).to(resolution.device)
 
 def get_local_pose(ego_pose, pose):
     """
@@ -88,7 +87,7 @@ def get_local_pose(ego_pose, pose):
     transform = torch.tensor([[torch.cos(ego_pose[2]), -torch.sin(ego_pose[2]), ego_pose[0]],[ torch.sin(ego_pose[2]), torch.cos(ego_pose[2]), ego_pose[1]], [0,0,1]])
     position = torch.matmul(torch.inverse(transform), torch.tensor([pose[0], pose[1], 1]))[0:2]
 
-    return torch.tensor([position[0], position[1], pose[2] - ego_pose[2]])
+    return torch.tensor([position[0], position[1], pose[2] - ego_pose[2]], device = ego_pose.device)
 
 
 if __name__ == '__main__':
