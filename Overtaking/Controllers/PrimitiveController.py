@@ -7,7 +7,7 @@ import torch
 from matplotlib import pyplot as plt
 from ..MotionPrimitives.TreeMotionPrimitives import TreeMotionPrimitive
 from .PrimitiveBasedControllerSuper import PrimitiveBasedControllerSuper
-from ..Util import LocalField
+from ..Util import LocalField, ParetoFront
 
 
 class PrimitiveController(PrimitiveBasedControllerSuper):

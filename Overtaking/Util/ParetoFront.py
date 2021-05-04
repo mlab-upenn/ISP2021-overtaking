@@ -12,11 +12,11 @@ def pareto_front(costs):
     """
     n_points = costs.shape[0]
     is_efficient = np.arange(n_points)
-    next_point_index = 0  # Next index in the is_efficient array to search for
-    while next_point_index < n_points:
-        nondominated_mask = np.any(costs<costs[next_point_index], axis=1)
+    next_point_index = 0 
+    while next_point_index < costs.shape[0]:
+        nondominated_mask = np.any(costs < costs[next_point_index], axis=1)
         nondominated_mask[next_point_index] = True
-        is_efficient = is_efficient[nondominated_mask] # Remove dominated points
+        is_efficient = is_efficient[nondominated_mask]
         costs = costs[nondominated_mask]
         next_point_index = np.sum(nondominated_mask[:next_point_index]) + 1
     return is_efficient

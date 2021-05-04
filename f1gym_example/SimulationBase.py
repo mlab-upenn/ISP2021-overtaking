@@ -34,9 +34,9 @@ def SimulateWithOpponent(f1map, ego_controller, ego_start_offset, opp_controller
         obs, step_reward, done, info = env.step(np.array([[steer.detach().cpu(), speed.detach().cpu()], [opp_steer.detach().cpu(), opp_speed.detach().cpu()]]))
         # laptime += step_reward
 
-
         planners = [(ego_controller.MP.x.detach().cpu(), ego_controller.MP.y.detach().cpu(), prim.detach().cpu()),
                     (opp_controller.MP.x.detach().cpu(), opp_controller.MP.y.detach().cpu(), opp_prim.detach().cpu())]
+
         # planners = [(ego_controller.MP.x, ego_controller.MP.y, prim)]
         env.render(mode='human_fast', planner_data=planners)
 
