@@ -1,0 +1,11 @@
+numpy==1.13.3
+rospkg==1.2.6
+rospy==1.14.4.post0
+numba==0.52.0
+torch==1.8.0+cu111
+gym==0.18.0
+matplotlib==3.2.1
+catkin_pkg==0.4.20
+Pillow==8.2.0
+PyYAML==5.4.1
+tf==1.0.0

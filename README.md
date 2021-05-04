@@ -1,35 +1,29 @@
-# ISP2021-overtaking
+# Risk-based Path Planning for Autonomous Overtaking Manuevers
 This is the github project for the F1Tenth Independent Study Projects 2021. In this project we are focusing on  advanced overtaking techniques that are enable and improvisation of the driver.
 
 ## Requirements
-- Linux Ubuntu (tested on versions XX.XX and XX.XX)
-- Python 3.XX.
-- ....
+- Linux Ubuntu (developed and tested on version 18.04)
+- Python 3.6.9
+- [f1tenth_gym](https://github.com/DavidDePauw1/f1tenth_gym) package
+- packages listed in `requirements.txt`
 
 ## Installation
-Use the provided `requirements.txt` in the root directory of this repo, in order to install all required modules.\
+Use the command below in the root directory of this repo, in order to install all required modules
+
 `pip3 install -r /path/to/requirements.txt`
 
+## Running Example Scripts
+Use the commands below to run scripts to exemplify the usage and functionality of this project
 
-The code is developed with Python 3.XX.
+`python3 ExampleScripts/IntegratedControllerExample.py`
 
-## Running the code
-* `Step 1:` In step 1 you need to do this and that...
-* `Step 2:` In step 2 you have to do the following...
-* `Step 3:` ....
+## Code Organization
 
+This project is organized into a number of directories, each of which has its own `README` file going into further detail on its contents.  Top level directories for this repository include.
 
+- `ExampleScripts` - scripts meant to showcase project's functionality and provide insight into how to use the code
+- `Overtaking` - Python package implementing controllers using risk-based motion primitives
 
-## Folder Structure
-
-All main scripts depend on the following subfolders:
-
-1. Folder 1 contains the files for xxx...
-2. Folder 2 contains the files for...
-
-
-## Files
-| File | Description |
-|----|----|
-main.py   | Is used to start the algorithm
-test.py | Is used to create the results
+## Authors
+- [Raymond Bjorkman](raybjork@seas.upenn.edu)
+- [David DePauw](daviddep@seas.upenn.edu)
