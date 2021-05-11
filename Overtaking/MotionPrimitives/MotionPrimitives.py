@@ -6,9 +6,11 @@ from .MotionPrimitiveSuper import MotionPrimitiveSuper
 # from .MotionPrimitiveSuper import MotionPrimitiveSuper
 
 
+# Class for generating full set of primitives from discrete sets of speeds and steering angles.
+# Primitives assume constant speed and steering angle for t_la time.
 class MotionPrimitive(MotionPrimitiveSuper):
     def __init__(self, speed_list, steering_list, L=.33, p=1, t_la=2.5, k1=.2, k2=.3, k3=.1, m=.1, c=.12, local_grid_size = 7, resolution=(50, 50)):
-        # speed and steering are lists of speed and steering values
+        # speed and steering : lists of discrete speed and steering values
         #L : wheelbase of the car
         # p : not currently used
         # t_la : lookahead time
@@ -17,6 +19,8 @@ class MotionPrimitive(MotionPrimitiveSuper):
         # k3 : exterior std scaling with speed
         # m : path length std scaling
         # c : width of the car
+        # local_grid_size : size of the prediction area in front of the car
+        # resolution ; resolution of the prediction area
         self.arc_lengths_local = torch.zeros(len(speed_list)*len(steering_list))
 
         speed_vals = torch.tensor(speed_list)
@@ -30,6 +34,7 @@ class MotionPrimitive(MotionPrimitiveSuper):
         super().__init__( speeds, steering_angles, L=L, p=p, t_la=t_la, k1=k1, k2=k2, k3=k3, m=m, c=c, local_grid_size = local_grid_size, resolution=resolution)
 
 
+    # generates a set of primitives of tensor size[N, res+1, res+1] normalized 0 to 1
     def create_primitives(self):
         primitives = torch.zeros((torch.numel(self.speeds), self.resolution[0] + 1, self.resolution[1] + 1))
 
@@ -53,6 +58,9 @@ class MotionPrimitive(MotionPrimitiveSuper):
 
         return primitives/torch.max(primitives)
 
+    # see superclass documentation for all remaining methods
+
+
     def get_a(self, speed, steering, straight):
         a = super().get_a(speed, steering, self.x, self.y, self.arc_lengths_local[:len(speed)], straight)
         return a#/normalize
@@ -75,6 +83,7 @@ class MotionPrimitive(MotionPrimitiveSuper):
     def get_control_for(self, primitive_number):
         return self.speeds[primitive_number], self.steering_angles[primitive_number]
 
+#quick test for checking primitives
 if __name__ == '__main__':
     import time
     t_b = time.time()

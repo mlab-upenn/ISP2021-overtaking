@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
-
+# Superclass for defining different motion primitive classes
 class MotionPrimitiveSuper:
     def __init__(self, speeds, steering_angles, L=.33, p=1, t_la=2.5, k1=.2, k2=.3, k3=.1, m=.1, c=.12, local_grid_size = 7, resolution=(50, 50)):
         # speed and steering are lists of speed and steering values
@@ -15,6 +15,8 @@ class MotionPrimitiveSuper:
         # k3 : exterior std scaling with speed
         # m : path length std scaling
         # c : width of the car
+        # local_grid_size : size of the prediction area in front of the car
+        # resolution ; resolution of the prediction area
 
         self.L = L
         self.p = p
@@ -46,26 +48,40 @@ class MotionPrimitiveSuper:
         self.time_field = self.create_time_field()
 
 
-
+    # calculates a for each point in the local grid (height scale of risk)
     def get_a(self, speed, steering, grid_x, grid_y, arc_length, straight):
-        # a should be (N[straight/turn], res[0], res[1])
+        # input :
+        # speed : 1d tensor of speeds
+        # steering : 1d tensor of steering angles
+        # grid_x : 2d tensor of x values at each point
+        # grid_y : 2d tensor of y values at each point
+        # arc_length : 1d tensor of the distance already traveled in each primitive
+        # straight : boolean of whether or not these primitives are moving straight (this should be eliminated)
+
+        # output :
+        # a : tenosr of (N[straight/turn], res[0]+1, res[1]+1)
+
         s = self.get_s(speed, steering, grid_x, grid_y, arc_length, straight)
 
         a = (torch.clamp_min(1 - self.p * s, 0))
-        # a = self.p*(torch.clamp_max(speed.view(-1,1,1)*self.t_la - s, 0))
-
-        # this is to keep tuning consistent, negates the impact of p
-        # normalize = self.p * (speed.view(-1, 1, 1) * self.t_la)
 
         a = torch.clamp_min(a ,0)
-        # print(a.shape, s.shape)
         a[s-arc_length.reshape(-1,1,1)<0] = 0
 
         a[(s-arc_length.reshape(-1,1,1))/speed.view(-1, 1, 1) > self.t_la] = 0
         return a
 
     def get_s(self, speed, steering, grid_x, grid_y, arc_length, straight):
-        #s should be (N[straight/turn], res[0], res[1])
+        # input :
+        # speed : 1d tensor of speeds
+        # steering : 1d tensor of steering angles
+        # grid_x : 2d tensor of x values at each point
+        # grid_y : 2d tensor of y values at each point
+        # arc_length : 1d tensor of the distance already traveled in each primitive
+        # straight : boolean of whether or not these primitives are moving straight (this should be eliminated)
+
+        # output :
+        # s : tensor of (N[straight/turn], res[0], res[1])
 
         if(straight):
             return grid_x + arc_length.reshape(-1,1,1)
@@ -78,8 +94,16 @@ class MotionPrimitiveSuper:
 
 
     def get_sig(self, speed, steering, grid_x, grid_y, arc_length, straight):
-        #sig should be (N, res[0], res[1])
-        #just use K1 for now
+        # input :
+        # speed : 1d tensor of speeds
+        # steering : 1d tensor of steering angles
+        # grid_x : 2d tensor of x values at each point
+        # grid_y : 2d tensor of y values at each point
+        # arc_length : 1d tensor of the distance already traveled in each primitive
+        # straight : boolean of whether or not these primitives are moving straight (this should be eliminated)
+
+        # output :
+        # sig : tenosr of (N[straight/turn], res[0]+1, res[1]+1)
 
         s = self.get_s(speed, steering, grid_x, grid_y, arc_length, straight) #
         R = self.get_R(speed,steering).view(-1,1,1)
@@ -89,11 +113,13 @@ class MotionPrimitiveSuper:
 
         return sig
 
+    # returns the radius of curvature for the associated
     def get_R(self, speed, steering):
         # only valid for steering[turn_mask]
         R = self.L / torch.tan(steering)
         return R
 
+    # generates distance field (scale by inverse speed to get time field)
     def create_time_field(self):
         r = (self.x**2 + self.y**2)/(2*torch.abs(self.y))
 
@@ -105,6 +131,7 @@ class MotionPrimitiveSuper:
         return s
 
 
+    # abstract methods for subclasses to customize behaviour
     def create_primitives(self):
         #self.primitives =
         raise NotImplementedError("create primitives method not defined, subclass needs to implement this method")

@@ -2,12 +2,12 @@ import torch
 import numpy as np
 from matplotlib import pyplot as plt
 from .MotionPrimitives import MotionPrimitiveSuper
-import time
 
 
+# generates a set of primitives consisting of all possible control combinations from discrete lists of speeds and steering angles up to certain depth.
 class TreeMotionPrimitive(MotionPrimitiveSuper):
     def __init__(self, speed_list, steering_list, depth=3, L=.33, p=.2, t_la=1, k1=.0, k2=.0, k3=.0, m=.1, c=.12, local_grid_size = 7, resolution=(40, 40)):
-        # speed and steering are lists of speed and steering values
+        # speed and steering : lists of speed and steering values
         # depth : depth of the primitive tree
         #L : wheelbase of the car
         # p : not currently used
@@ -17,6 +17,8 @@ class TreeMotionPrimitive(MotionPrimitiveSuper):
         # k3 : exterior std scaling with speed
         # m : path length std scaling
         # c : width of the car
+        # local_grid_size : size of the prediction area in front of the car
+        # resolution ; resolution of the prediction area
         self.depth = depth
 
         #check if enumeration of specific primitives has already been done (from ExplicitPrimitiveSet)
@@ -34,6 +36,7 @@ class TreeMotionPrimitive(MotionPrimitiveSuper):
         super().__init__( speeds, steering_angles, L=L, p=p, t_la=t_la, k1=k1, k2=k2, k3=k3, m=m, c=c, local_grid_size = local_grid_size, resolution=resolution)
 
 
+    # generates set of primitives in a tree up to certain depth
     def create_primitives(self):
         xy_offset = torch.zeros((1, 2))
         theta_offset = torch.zeros((1))
@@ -62,6 +65,7 @@ class TreeMotionPrimitive(MotionPrimitiveSuper):
 
         return primitives
 
+    # helper method for expanding appropriate tensors to accomadate new tree level
     def create_next_level_input(self, speed, steering, primitives, xy_offset, theta_offset, arc_length):
         primitives = torch.repeat_interleave(primitives, self.speeds.shape[0], dim=0)
         arc_length = torch.repeat_interleave(arc_length, self.speeds.shape[0], dim=0)
@@ -73,9 +77,8 @@ class TreeMotionPrimitive(MotionPrimitiveSuper):
 
         return primitives, speed, steering, xy_offset, theta_offset, arc_length
 
+    # helper method for generating a section of primitive at certain tree depth given offsets and distance travelled by that point in the primitive
     def generate_primitives(self, speed, steering, xy_offset, theta_offset, arc_length):
-
-        # print(speed.shape, steering.shape, xy_offset.shape, theta_offset.shape, arc_length.shape )
 
         primitives = torch.zeros((torch.numel(speed), self.resolution[0] + 1, self.resolution[1] + 1))
         turn_mask = torch.abs(steering) > 0.01
@@ -120,20 +123,37 @@ class TreeMotionPrimitive(MotionPrimitiveSuper):
         return primitives, new_xy_offset, new_theta_offset, arc_length
 
 
-
+    # translates grid of x and y points by offsets for use in generating a primitive segment given initial offsets (like would be the case in tree depth > 1)
     def translate_xy(self, x, y, xy_offset, theta_offset):
-        #return new x,y
+        # x : 3d tensor of size [N, res+1, res+1] of x grid values
+        # y : 3d tensor of size [N, res+1, res+1] of y grid values
+        # xy_offset : tensor of size [N, 2] of the current x, y (respectively) offsets from 0,0 in local space
+        # theta_offset : 1d tensor of the current angular offset
+
+        # outputs:
+        # translated_x : updated x grid values
+        # translated_y : updated y grid values
+
         x = x.unsqueeze(0)
         y = y.unsqueeze(0)
         theta_offset = theta_offset.reshape(-1,1,1)
-
-        # print(theta_offset.shape, x.shape, xy_offset.shape)
         shift_x = x - xy_offset[:,0].reshape(-1,1,1)
         shift_y = y - xy_offset[:,1].reshape(-1,1,1)
-        return (torch.cos(-theta_offset)*shift_x - torch.sin(-theta_offset)*shift_y), (torch.sin(-theta_offset)*shift_x + torch.cos(-theta_offset)*shift_y)
+        translated_x = (torch.cos(-theta_offset)*shift_x - torch.sin(-theta_offset)*shift_y)
+        translated_y = (torch.sin(-theta_offset)*shift_x + torch.cos(-theta_offset)*shift_y)
+        return translated_x, translated_y
         # return (torch.cos(-theta_offset)*x - torch.sin(-theta_offset)*y)-xy_offset[:,0].reshape(-1,1,1), (torch.sin(-theta_offset)*x + torch.cos(-theta_offset)*y)-xy_offset[:,1].reshape(-1,1,1)
 
+    # updates the distance and angular offset
     def calculate_new_distance(self, xy_offset, theta_offset, local_xy, local_theta):
+        # xy_offset : tensor of size [N, 2] of the current x, y (respectively) offsets from 0,0 in local space
+        # theta_offset : 1d tensor of the current angular offset
+        # local_xy : 2d tensor of size [N, 2] of x, y offsets for single primitive segment
+        # local_theta : 1d tensor for the angular offset for single primitve segment
+
+        # outputs:
+        # xy_offset : updated x and y offsets from 0, 0 in local space
+        # theta_offset : updated theta_offset in local space
 
 
         xy_offset[:,0] = xy_offset[:,0]+torch.cos(theta_offset)*local_xy[:,0] - torch.sin(theta_offset)*local_xy[:,1]

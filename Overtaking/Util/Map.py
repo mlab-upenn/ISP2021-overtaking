@@ -55,7 +55,7 @@ class Map():
             self.reward = torch.tensor(self.reward)
 
 
-
+    # simple display for loaded map data
     def display(self):
         fig, axes = plt.subplots(nrows=2, figsize=(4, 6))
         axes.flat[0].set_title("Occupancy Map")

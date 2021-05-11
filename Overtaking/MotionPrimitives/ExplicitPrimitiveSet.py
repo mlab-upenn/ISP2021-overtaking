@@ -21,6 +21,8 @@ class ExplicitPrimitiveSet(TreeMotionPrimitive):
         # k3 : exterior std scaling with speed
         # m : path length std scaling
         # c : width of the car
+        # local_grid_size : size of the prediction area in front of the car
+        # resolution ; resolution of the prediction area
 
         # check that both lists have the same number of time steps
         assert speed_list.shape[1] == steering_list.shape[1]
